@@ -101,6 +101,7 @@ class DevServer(Resource, object):
             # no app nor app import path given, let's guess!
             files_in_cwd = os.listdir(os.getcwd())
             if 'manage.py' in files_in_cwd:
+                sys.path.insert(0, os.getcwd())
                 from txdevserver.django_helpers import get_django_app
                 django_app = get_django_app('manage.py')
                 if django_app is not None:
@@ -108,7 +109,7 @@ class DevServer(Resource, object):
 
         if app is None:
             app = NoResource("Couldn't find the app!")
-            
+
         rv = LoggedWSGIResource(reactor, reactor.getThreadPool(), app,
             subOptions.get('log_data_factory'))
 
