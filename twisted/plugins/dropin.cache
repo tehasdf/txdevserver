@@ -42,7 +42,9 @@ p20
 g6
 sS'name'
 p21
-S'WebappServiceMaker'
+S'serviceMaker'
 p22
 sg10
-Nsbasbs.
+S'\n    Utility class to simplify the definition of L{IServiceMaker} plugins.\n    '
+p23
+sbasbs.

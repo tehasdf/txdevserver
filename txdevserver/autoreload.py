@@ -51,11 +51,12 @@ _win = (sys.platform == "win32")
 
 def code_changed():
     global _mtimes, _win
-    for filename in filter(lambda v: v, map(lambda m: getattr(m, "__file__", None), sys.modules.values())):
+    changed = []
+    for filename, module in [(getattr(module, '__file__'), module) for module in sys.modules.values() if hasattr(module, '__file__')]:
         if filename.endswith(".pyc") or filename.endswith(".pyo"):
             filename = filename[:-1]
         if not os.path.exists(filename):
-            continue # File might be in an egg, so it can't be reloaded.
+            continue  # File might be in an egg, so it can't be reloaded.
         stat = os.stat(filename)
         mtime = stat.st_mtime
         if _win:
@@ -64,8 +65,10 @@ def code_changed():
             _mtimes[filename] = mtime
             continue
         if mtime != _mtimes[filename]:
-            _mtimes = {}
-            return True
+            changed.append(module)
+    if changed:
+        _mtimes = {}
+        return changed
     return False
 
 def reloader_thread(softexit=False):

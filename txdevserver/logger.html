@@ -1,72 +1,60 @@
 <!doctype html>
 <html>
 <head>
-    <title>pxl - logger</title>
+    <title>txDevServer</title>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+
+    <script type="text/template" id="requestLogMessageTemplate">
+    <li class="<%= level %>" data-category="<%= name %>">
+        <span class="name"><%= name %></span>
+        <span class="now"><%= new Date().toLocaleTimeString() %></span> 
+        <span class="time"><%= Math.round(time) %>ms</span> 
+        <span><a href="<%= uri %>" target="_blank"><%= uri %></a></span>
+        <span class="code"><%= code %></span>
+    </li>
+    </script>
+
+    <script type="text/template" id="genericLogMessageTemplate">
+    <li class="<%= level %>" data-category="<%= name %>">
+        <span class="name"><%= name %></span>
+        <span class="now"><%= new Date().toLocaleTimeString() %></span>
+        <span><%= text %></span>
+    </li>
+    </script>
+
+    <script type="text/template" id="categoryCheckboxTemplate">
+        <li><label><input type=checkbox data-category="<%= category %>" checked><%= category %></label></li>
+    </script>
+
     <script>
-        var logTarget;
         var light;
         var queryTarget;
         var clear = false;
+        var categories = {};
+        var requestLogTemplate = _.template($("#requestLogMessageTemplate").html());
+        var genericLogTemplate = _.template($("#genericLogMessageTemplate").html());
+        var categoryCheckboxTemplate = _.template($("#categoryCheckboxTemplate").html());
 
         var mes = function(data, category){
-            if (typeof logTarget == "undefined"){
-                return;
+            if (category == "webapp.request"){
+                var newLog = requestLogTemplate(data);
+            } else {
+                var newLog = genericLogTemplate(data);
             }
-
-            var newLog = document.createElement("li");
-            if (typeof category != "undefined"){
-                newLog.classList.add("event-" + category);
-            };
-            var addSpan = function(data, classname){
-                var newSpan = document.createElement("span");
-                newSpan.classList.add(classname);
-                newSpan.innerHTML = data;
-                newLog.appendChild(newSpan);
-                return newSpan;
-            }
-            addSpan(new Date().toLocaleTimeString(), "now");
-            addSpan(Math.round(data.time) + " ms", "time");
-            var url = document.createElement("a");
-            url.setAttribute("href", data.uri);
-            url.setAttribute("target", "_blank");
-            url.innerHTML = data.uri;
-            addSpan("", "uri").appendChild(url);
-            addSpan(data.code, "code");
-            addSpan("Queries: " + data.queries, "queries");
-            logTarget.insertBefore(newLog, logTarget.firstChild);
+            $("#log").prepend(newLog);
 
         };
 
-        var mes_sql = function(query){
-            if (typeof queryTarget == "undefined"){
-                return;
-            }
-            if (clear){
-                queryTarget.innerHTML = "";
-            }
-            var newLog = document.createElement("li");
-            newLog.innerHTML = query;
-            queryTarget.insertBefore(newLog, queryTarget.firstChild);
-        };
-
-        var mes_manual = function(message){
-            if (typeof logTarget == "undefined"){
-                return;
-            }
-            var newLog = document.createElement("li");
-            var addSpan = function(data, classname){
-                var newSpan = document.createElement("span");
-                newSpan.classList.add(classname);
-                newSpan.innerHTML = data;
-                newLog.appendChild(newSpan);
-                return newSpan;
-            }
-            
-            addSpan(new Date().toLocaleTimeString(), "manual-now");
-            addSpan(message, "manual");
-            logTarget.insertBefore(newLog, logTarget.firstChild);
-        };
         var ES = new EventSource("/log_es");
+
+        var record_category = function(category){
+            if (_.isUndefined(categories[category])){
+                categories[category] = true;
+                var newCheckbox = categoryCheckboxTemplate({category: category});
+                $("#categories").prepend(newCheckbox);
+            };
+        };
 
         ES.onmessage = function(data){
                 message = JSON.parse(data.data);
@@ -75,15 +63,8 @@
                     setConnected(true);
                     return;
                 }
-                if (message.event == "sql") {
-                    mes_sql(message.data);
-                    clear = false;
-                    return;
-                }
-                if (message.event == "manual") {
-                    mes_manual(message.data);
-                    return;
-                }
+
+                record_category(message.event);
                 mes(message.data, message.event);
                 clear = true;
         };
@@ -111,12 +92,23 @@
                 light.classList.add("off");
             }
         };
-        document.addEventListener('DOMContentLoaded', function(){
+        $(function(){
             logTarget = document.getElementById("log");
             light = document.getElementById("isConnected");
             queryTarget = document.getElementById("queryLog");
+
+            $("#categories").on("change", "input[type=checkbox]",    function(e){
+                $("#log li[data-category='" + e.target.dataset['category'] + "']").each(function(index, elem){ 
+                    if (e.target.checked){
+                        $(elem).show();
+                    } else {
+                        $(elem).hide();
+                    }
+                });
+            });
+
         });
-        
+
         
     </script>
 
@@ -124,6 +116,7 @@
     #log {
         list-style-type: none;
     }
+
     .event-hello {
         display: none;
     }
@@ -135,29 +128,39 @@
     #isConnected.off {
         color: red;
     }
+
     #log li span {
         padding-right: 20px;
     }
+
     #log li {
         margin-bottom: 10px;
     }
-    #log li.event-ERROR {
+
+    .ERROR, .CRITICAL {
         color: red;
     }
-    .manual {
-        color: red;
-        font-weight: bold;
+
+    #log {
+        float: left;
     }
-    #queryLog {
-        color: #aaa;
-        font-size: small;
+
+    aside {
+        float: right;
+    }
+
+    #categories {
+        list-style-type: none;
     }
     </style>
 
 </head>
 <body>
-    <span id="isConnected"></span>
+    
     <ul id="log"></ul>
-    <ul id="queryLog"></ul>
+    <aside>
+        <span id="isConnected"></span>
+        <ul id="categories"></ul>
+    </aside>
 </body>
 </html>

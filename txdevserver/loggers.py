@@ -5,6 +5,7 @@ import sys
 
 webapp_logger = logging.getLogger('webapp.request')
 
+
 def log_request(error=None, request=None, start_time=None, start_queries=0, params_factory=None):
     time_taken = (time.time() - start_time) * 1000
     extra = {
@@ -14,7 +15,7 @@ def log_request(error=None, request=None, start_time=None, start_queries=0, para
         "code": request.code,
     }
     extra.update(params_factory())
-    webapp_logger.info("{1:.0f}ms {0.method} {0.uri} -- {0.code}".format(request, time_taken), 
+    webapp_logger.info("{1:.0f}ms {0.method} {0.uri} -- {0.code}".format(request, time_taken),
         extra={"extra": extra})
 
 
@@ -30,21 +31,24 @@ debug_log_format = (
 
 class _ESLogger(logging.Handler, EventSource):
     def emit(self, record):
-        if hasattr(record, "extra"):
-            self.send_to_all(record.levelname, record.extra)
+        if hasattr(record, 'extra'):
+            data = record.extra
         else:
-            if record.name == 'django.db.backends':
-                self.send_to_all("sql", self.format(record))
-            else:
-                self.send_to_all("manual", self.format(record))
+            data = {}
+
+        data['name'] = record.name
+        data['level'] = record.levelname
+        data['text'] = self.format(record)
+        self.send_to_all(record.name, data)
+
 
 webAppLogHandler = logging.StreamHandler(stream=sys.stdout)
 webAppLogHandler.setFormatter(logging.Formatter(fmt=debug_log_format))
 
 webAppLogHandler.setLevel(logging.DEBUG)
-webapp_logger.addHandler(webAppLogHandler)
+logging.root.addHandler(webAppLogHandler)
 
 
 ESLogger = _ESLogger()
 ESLogger.setLevel(logging.DEBUG)
-webapp_logger.addHandler(ESLogger)
+logging.root.addHandler(ESLogger)
