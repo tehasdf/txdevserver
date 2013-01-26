@@ -55,8 +55,10 @@ class DevServer(Resource, object):
 
         self.attach_app(options)
 
-        self.reloader = LoopingCall(self.check_and_reload, options)
-        self.reloader.start(2, now=True)
+        # let's use the old autoreload module for now
+
+        # self.reloader = LoopingCall(self.check_and_reload, options)
+        # self.reloader.start(2, now=True)
 
         self._mtimes = {}
 
@@ -88,6 +90,8 @@ class DevServer(Resource, object):
         return getattr(self, 'app')
 
     def attach_app(self, subOptions):
+        app = None
+
         fromAppOpts = subOptions.parent.get('appOpts', {}).get('app')
         if fromAppOpts is not None:
             app = fromAppOpts
@@ -102,6 +106,9 @@ class DevServer(Resource, object):
                 if django_app is not None:
                     app = django_app
 
+        if app is None:
+            app = NoResource("Couldn't find the app!")
+            
         rv = LoggedWSGIResource(reactor, reactor.getThreadPool(), app,
             subOptions.get('log_data_factory'))
 

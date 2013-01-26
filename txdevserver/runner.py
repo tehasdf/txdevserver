@@ -2,7 +2,7 @@ from twisted.scripts import twistd
 from twisted.python.usage import Options
 import os
 import sys
-
+from txdevserver import autoreload
 logger_file = os.path.join(os.path.dirname(__file__), 'logger.html')
 
 
@@ -31,4 +31,5 @@ def run(options=None, **kwargs):
 
     if kwargs:
         TxDevServerOptions._optionOverrides.update(kwargs)
-    twistd.app.run(twistd.runApp, TxDevServerOptions)
+
+    autoreload.main(twistd.app.run, [twistd.runApp, TxDevServerOptions])
