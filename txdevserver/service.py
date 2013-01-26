@@ -2,6 +2,7 @@ from txdevserver.loggers import ESLogger
 from functools import partial
 import time
 import sys
+import os
 
 from twisted.web.resource import Resource, NoResource
 from twisted.web.wsgi import WSGIResource
@@ -90,9 +91,16 @@ class DevServer(Resource, object):
         fromAppOpts = subOptions.parent.get('appOpts', {}).get('app')
         if fromAppOpts is not None:
             app = fromAppOpts
-
-        else:
+        elif subOptions['app'] is not None:
             app = import_string(subOptions['app'])
+        else:
+            # no app nor app import path given, let's guess!
+            files_in_cwd = os.listdir(os.getcwd())
+            if 'manage.py' in files_in_cwd:
+                from txdevserver.django_helpers import get_django_app
+                django_app = get_django_app('manage.py')
+                if django_app is not None:
+                    app = django_app
 
         rv = LoggedWSGIResource(reactor, reactor.getThreadPool(), app,
             subOptions.get('log_data_factory'))
