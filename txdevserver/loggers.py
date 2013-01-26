@@ -42,13 +42,6 @@ class _ESLogger(logging.Handler, EventSource):
         self.send_to_all(record.name, data)
 
 
-webAppLogHandler = logging.StreamHandler(stream=sys.stdout)
-webAppLogHandler.setFormatter(logging.Formatter(fmt=debug_log_format))
-
-webAppLogHandler.setLevel(logging.DEBUG)
-logging.root.addHandler(webAppLogHandler)
-
-
 ESLogger = _ESLogger()
 ESLogger.setLevel(logging.DEBUG)
 logging.root.addHandler(ESLogger)
